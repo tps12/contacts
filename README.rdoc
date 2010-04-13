@@ -23,6 +23,42 @@ starters); feel free to contribute.
 
 Author: <b>Mislav Marohnić</b> (mislav.marohnic@gmail.com)
 
+== Documentation specific to SunDawg fork
+
+This project was forked from the original project by Mislav in order to support GData signed requests.
+Specific to this fork are the following:
+
+- detecting Windows Live cancel authorization
+- JSON changes for Yahoo.
+- supported for signed requests using GData protocol
+- fixed Fakeweb deprecation issues and fixed for version 1.2.7
+
+Signed requests are required to remove security warnings on Google authorization requests. 
+In order to use secure settings, do the following when generating an authorizational_url:
+
+Contacts::Google.authentication_url(YOUR_CALLBACK_URL, :session => true, :secure => true)
+
+When you try to promote the authentication token returned to your callback into a session token,
+you must set the private key before promotion.
+
+You can set the private key as so:
+
+Contacts::Google.set_private_key(YOUR_PRIVATE_KEY)
+Contacts::Google.session_token(THE_AUTH_TOKEN)
+
+If this is successful, you will have a session token that can be used to fetch contact information.
+
+The key can be a file path or in memory string of the key you generated.
+
+The certificate that is generated with your key must be registered with Google:
+
+https://www.google.com/accounts/ManageDomains
+
+For more information on secure session requirements for Google and signatures:
+
+http://code.google.com/apis/accounts/docs/AuthSub.html#AuthSubSessionToken
+http://code.google.com/apis/accounts/docs/AuthSub.html#signingrequests
+
 == Documentation auto-generated from specifications
 
 Contacts::Google.authentication_url
