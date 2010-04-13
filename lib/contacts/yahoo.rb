@@ -6,7 +6,6 @@ require 'md5'
 require 'net/https'
 require 'uri'
 require 'yaml'
-require 'json' unless defined? ActiveSupport::JSON
 
 module Contacts
   # = How I can fetch Yahoo Contacts?
@@ -105,16 +104,12 @@ module Contacts
     # * path <String>:: The path of the redirect request that Yahoo sent to you
     # after authenticating the user
     #
-    def contacts(path)
-      begin
-        validate_signature(path)
-        credentials = access_user_credentials()
-        parse_credentials(credentials)
-        contacts_json = access_address_book_api()
-        Yahoo.parse_contacts(contacts_json)
-      rescue Exception => e
-        "Error #{e.class}: #{e.message}."
-      end
+    def contacts(path, force_json_gem=false)
+      validate_signature(path)
+      credentials = access_user_credentials()
+      parse_credentials(credentials)
+      contacts_json = access_address_book_api()
+      Yahoo.parse_contacts(contacts_json, force_json_gem)
     end
 
     # This method processes and validates the redirect request that Yahoo send to
@@ -179,8 +174,14 @@ module Contacts
     # ==== Paramaters
     # * xml <String>:: A String containing the user's credentials
     #
+    
+    # temporary hack to find out cause of xml values being nil
+    class XMLParseError < StandardError; end
+    
     def parse_credentials(xml)
       doc = Hpricot::XML(xml)
+      node = doc.at('/BBAuthTokenLoginResponse/Success/WSSID')
+      raise XMLParseError, xml.to_s if !node
       @wssid = doc.at('/BBAuthTokenLoginResponse/Success/WSSID').inner_text.strip
       @cookie = doc.at('/BBAuthTokenLoginResponse/Success/Cookie').inner_text.strip
     end
@@ -210,11 +211,12 @@ module Contacts
     # ==== Parameters
     # * json <String>:: A String of user's contacts in JSON format
     #
-    def self.parse_contacts(json)
+    def self.parse_contacts(json, force_json_gem=false)
       contacts = []
-      people = if defined? ActiveSupport::JSON
+      people = if !force_json_gem && defined? ActiveSupport::JSON
         ActiveSupport::JSON.decode(json)
       else
+        require 'json'
         JSON.parse(json)
       end
 
