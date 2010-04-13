@@ -17,7 +17,7 @@ describe Contacts::Google do
 
   describe 'fetches contacts feed via HTTP GET' do
     it 'with defaults' do
-      FakeWeb::register_uri(:get, 'www.google.com/m8/feeds/contacts/default/thin',
+      FakeWeb::register_uri(:get, 'https://www.google.com/m8/feeds/contacts/default/thin',
         :body => 'thin results',
         :verify => lambda { |req|
           req['Authorization'].should == %(AuthSub token="dummytoken")
@@ -34,7 +34,7 @@ describe Contacts::Google do
       @gmail = Contacts::Google.new('dummytoken', 'person@example.com')
       @gmail.projection = 'full'
       
-      FakeWeb::register_uri(:get, 'www.google.com/m8/feeds/contacts/person%40example.com/full',
+      FakeWeb::register_uri(:get, 'https://www.google.com/m8/feeds/contacts/person%40example.com/full',
         :body => 'full results'
       )
 
@@ -71,7 +71,7 @@ describe Contacts::Google do
   end
 
   it 'raises a fetching error when something goes awry' do
-    FakeWeb::register_uri(:get, 'www.google.com/m8/feeds/contacts/default/thin',
+    FakeWeb::register_uri(:get, 'https://www.google.com/m8/feeds/contacts/default/thin',
       :status => [404, 'YOU FAIL']
     )
       
@@ -159,7 +159,7 @@ describe Contacts::Google do
 
     def expect_params(params)
       query_string = Contacts::Google.query_string(params)
-      FakeWeb::register_uri(:get, "www.google.com/m8/feeds/contacts/default/thin?#{query_string}", {})
+      FakeWeb::register_uri(:get, "https://www.google.com/m8/feeds/contacts/default/thin?#{query_string}", {})
     end
     
   end

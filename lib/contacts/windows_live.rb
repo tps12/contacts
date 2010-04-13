@@ -1,5 +1,5 @@
 require 'contacts'
-require File.join(File.dirname(__FILE__), %w{.. .. vendor windowslivelogin})
+require File.join(File.dirname(__FILE__), %w{.. .. vendor windows_live_login})
 
 require 'rubygems'
 require 'hpricot'

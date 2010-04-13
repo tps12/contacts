@@ -8,7 +8,7 @@ require 'zlib'
 require 'stringio'
 require 'net/http'
 require 'net/https'
-require 'gdata'
+require 'base64'
 
 module Contacts
   # == Fetching Google Contacts
@@ -22,8 +22,10 @@ module Contacts
   # new instance of this class and request the contact list:
   #
   #   gmail = Contacts::Google.new(params[:token])
-  #   gmail.contacts
-  #   # => [#<Contact 1>, #<Contact 2>, ...]
+  #   contacts = gmail.contacts
+  #   #-> [ ['Fitzgerald', 'fubar@gmail.com', 'fubar@example.com'],
+  #         ['William Paginate', 'will.paginate@gmail.com'], ...
+  #         ]
   #
   # == Storing a session token
   #
@@ -49,7 +51,7 @@ module Contacts
     # default options for #authentication_url
     def self.authentication_url_options
       @authentication_url_options ||= {
-        :scope => "http://#{DOMAIN}#{FeedsPath}",
+        :scope => "https://#{DOMAIN}#{FeedsPath}",
         :secure => false,
         :session => false
       }
@@ -77,9 +79,34 @@ module Contacts
     #   (default: false)
     def self.authentication_url(target, options = {})
       params = authentication_url_options.merge(options)
+      if key = params.delete(:key)
+        params[:secure] = true
+        set_private_key(key)
+      end
       params[:next] = target
       query = query_string(params)
       "https://#{DOMAIN}#{AuthSubPath}Request?#{query}"
+    end
+
+    # Sets the private key for a secure AuthSub request. +key+ may be an IO, String or
+    # OpenSSL::PKey::RSA.
+    # Stolen from http://github.com/stuart/google-authsub/lib/googleauthsub.rb
+    def self.set_private_key(key)
+      case key
+      when OpenSSL::PKey::RSA
+        @@pkey = key
+      when File
+        @@pkey = OpenSSL::PKey::RSA.new(key.read)
+      when String
+        @@pkey = OpenSSL::PKey::RSA.new(key)
+      else
+        raise "Private Key in wrong format. Require IO, String or OpenSSL::PKey::RSA, you gave me #{key.class}"
+      end
+    end
+
+    # Unsets the private key. Only used for test teardowns.
+    def self.unset_private_key
+      @@pkey = nil
     end
 
     # Makes an HTTPS request to exchange the given token with a session one. Session
@@ -87,35 +114,20 @@ module Contacts
     #
     # Returns the new token as string or nil if the parameter couldn't be found in response
     # body.
-    def self.session_token(token, private_key = nil)
-
-      unless private_key.nil?
-        puts "CALLING PRIVATE KEY STUFF"
-        return session_token_secure(token, private_key)
+    def self.session_token(token)
+      response = http_start(true) do |google|
+        uri = AuthSubPath + 'SessionToken'
+        header = authorization_header(token, false, uri)
+        google.get(uri, header)
       end
-
-      response = http_start do |google|
-        google.get(AuthSubPath + 'SessionToken', authorization_header(token))
-      end
-
       pair = response.body.split(/\n/).detect { |p| p.index('Token=') == 0 }
       pair.split('=').last if pair
     end
 
-    # Performs a signed promotion to a session token using a private key.
-    def self.session_token_secure(token, private_key) 
-      client = GData::Client::DocList.new
-      client.authsub_token = token
-      client.authsub_private_key = private_key
-      client.auth_handler.upgrade()
-      client.authsub_token
-    end
-    
     # Alternative to AuthSub: using email and password.
     def self.client_login(email, password)
       response = http_start do |google|
         query = query_string(client_login_options.merge(:Email => email, :Passwd => password))
-        puts "posting #{query} to #{ClientLogin}" if Contacts::verbose?
         google.post(ClientLogin, query)
       end
 
@@ -123,7 +135,7 @@ module Contacts
       pair.split('=').last if pair
     end
     
-    attr_reader :user, :token, :headers
+    attr_reader :user, :token, :headers, :author
     attr_accessor :projection
 
     # A token is required here. By default, an AuthSub token from
@@ -131,6 +143,7 @@ module Contacts
     def initialize(token, user_id = 'default', client = false)
       @user    = user_id.to_s
       @token   = token.to_s
+      @client  = client
       @headers = {
         'Accept-Encoding' => 'gzip',
         'User-Agent' => Identifier + ' (gzip)'
@@ -139,11 +152,13 @@ module Contacts
     end
 
     def get(params) # :nodoc:
-      self.class.http_start(false) do |google|
+      self.class.http_start(true) do |google|
         path = FeedsPath + CGI.escape(@user)
         google_params = translate_parameters(params)
         query = self.class.query_string(google_params)
-        google.get("#{path}/#{@projection}?#{query}", @headers)
+        uri = "#{path}/#{@projection}?#{query}"
+        headers = @headers.update(self.class.authorization_header(@token, @client, uri))
+        google.get(uri, headers)
       end
     end
 
@@ -222,6 +237,9 @@ module Contacts
           end
         end
 
+        entry = (doc / '/feed/author').first
+        @author = Contact.new(entry.at('/email').inner_text, entry.at('/name').inner_text) if entry
+
         contacts_found
       end
       
@@ -270,9 +288,23 @@ module Contacts
         end
       end
       
-      def self.authorization_header(token, client = false)
-        type = client ? 'GoogleLogin auth' : 'AuthSub token'
-        { 'Authorization' => %(#{type}="#{token}") }
+      def self.secure?
+        defined?(@@pkey) && !@@pkey.nil?
+      end
+
+      def self.authorization_header(token, client = false, uri = nil)
+        if client
+          { 'Authorization' => %(GoogleLogin auth="#{token}") }
+        elsif secure?
+          timestamp = Time.now.to_i
+          nonce = OpenSSL::BN.rand_range(2**64)
+          data = "GET https://#{DOMAIN}#{uri} #{timestamp} #{nonce}"
+          sig = @@pkey.sign(OpenSSL::Digest::SHA1.new, data)
+          sig = Base64.b64encode(sig).gsub(/\n/, '') #Base64 encode
+          { 'Authorization' => "AuthSub token=\"#{token}\" sigalg=\"rsa-sha1\" data=\"#{data}\" sig=\"#{sig}\"" }
+        else
+          { 'Authorization' => %(AuthSub token="#{token}") }
+        end
       end
       
       def self.http_start(ssl = true)
@@ -299,7 +331,6 @@ module Contacts
                 raise TooManyRedirects.new(response)
               end
               location = URI.parse response['Location']
-              puts "Redirected to #{location}"
               response = http.get(location.path)
               redirects += 1
             else
@@ -312,11 +343,11 @@ module Contacts
       end
 
       def self.inspect_response(response, out = $stderr)
+        out.puts response.body
         out.puts response.inspect
         for name, value in response
           out.puts "#{name}: #{value}"
         end
-        out.puts "----\n#{response_body response}\n----" unless response.body.empty?
       end
   end
 end

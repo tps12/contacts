@@ -65,5 +65,4 @@ Echoe.new('sundawg_contacts', '0.0.1') do |p|
   p.email          = "christopher.sun@gmail.com"
   p.ignore_pattern = ["tmp/*", "script/*"]
   p.development_dependencies = ['fakeweb >=1.2.7']
-  p.runtime_dependencies = ['gdata >=1.1.1']
 end

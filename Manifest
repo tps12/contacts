@@ -1,5 +1,6 @@
 LICENSE
 MIT-LICENSE
+Manifest
 README.rdoc
 Rakefile
 lib/config/contacts.yml
@@ -26,5 +27,4 @@ spec/spec.opts
 spec/spec_helper.rb
 spec/windows_live/windows_live_spec.rb
 spec/yahoo/yahoo_spec.rb
-vendor/windowslivelogin.rb
-Manifest
+vendor/windows_live_login.rb
