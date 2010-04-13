@@ -1,5 +1,8 @@
 require 'spec/rake/spectask'
 require 'rake/rdoctask'
+require 'rubygems'
+require 'rake'
+require 'echoe'
 
 task :default => :spec
 
@@ -52,4 +55,15 @@ Rake::RDocTask.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'doc'
   rdoc.options << '--inline-source'
   rdoc.options << '--charset=UTF-8'
+end
+
+desc 'Generate Ruby gem'
+Echoe.new('sundawg_contacts', '0.0.1') do |p|
+  p.description    = "Project fork of Mislav Contacts to support signed GData protocol."
+  p.url            = "http://github.com/SunDawg/contacts"
+  p.author         = "Christopher Sun"
+  p.email          = "christopher.sun@gmail.com"
+  p.ignore_pattern = ["tmp/*", "script/*"]
+  p.development_dependencies = ['fakeweb >=1.2.7']
+  p.runtime_dependencies = ['gdata >=1.1.1']
 end

@@ -8,6 +8,7 @@ require 'zlib'
 require 'stringio'
 require 'net/http'
 require 'net/https'
+require 'gdata'
 
 module Contacts
   # == Fetching Google Contacts
@@ -86,13 +87,28 @@ module Contacts
     #
     # Returns the new token as string or nil if the parameter couldn't be found in response
     # body.
-    def self.session_token(token)
+    def self.session_token(token, private_key = nil)
+
+      unless private_key.nil?
+        puts "CALLING PRIVATE KEY STUFF"
+        return session_token_secure(token, private_key)
+      end
+
       response = http_start do |google|
         google.get(AuthSubPath + 'SessionToken', authorization_header(token))
       end
 
       pair = response.body.split(/\n/).detect { |p| p.index('Token=') == 0 }
       pair.split('=').last if pair
+    end
+
+    # Performs a signed promotion to a session token using a private key.
+    def self.session_token_secure(token, private_key) 
+      client = GData::Client::DocList.new
+      client.authsub_token = token
+      client.authsub_private_key = private_key
+      client.auth_handler.upgrade()
+      client.authsub_token
     end
     
     # Alternative to AuthSub: using email and password.
