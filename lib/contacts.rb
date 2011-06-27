@@ -44,3 +44,8 @@ module Contacts
   end
   
 end
+
+require 'contacts/google'
+require 'contacts/windows_live'
+require 'contacts/flickr'
+require 'contacts/yahoo'
