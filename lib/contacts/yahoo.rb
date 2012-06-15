@@ -1,7 +1,7 @@
 require 'contacts'
 
 require 'rubygems'
-require 'hpricot'
+require 'nokogiri'
 require 'md5'
 require 'net/https'
 require 'uri'
@@ -179,7 +179,7 @@ module Contacts
     class XMLParseError < StandardError; end
     
     def parse_credentials(xml)
-      doc = Hpricot::XML(xml)
+      doc = Nokogiri::XML(xml)
       node = doc.at('/BBAuthTokenLoginResponse/Success/WSSID')
       raise XMLParseError, xml.to_s if !node
       @wssid = doc.at('/BBAuthTokenLoginResponse/Success/WSSID').inner_text.strip

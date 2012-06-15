@@ -2,7 +2,7 @@ require 'contacts'
 require File.join(File.dirname(__FILE__), %w{.. .. vendor windows_live_login})
 
 require 'rubygems'
-require 'hpricot'
+require 'nokogiri'
 require 'uri'
 require 'yaml'
 
@@ -132,19 +132,19 @@ module Contacts
     # * xml <String>:: A string containing the XML contacts document
     #
     def self.parse_xml(xml)
-      doc = Hpricot::XML(xml)
+      doc = Nokogiri::XML(xml)
 
       contacts = []
-      doc.search('/livecontacts/contacts/contact').each do |contact|
-        email = contact.at('/preferredemail').inner_text
+      doc.search('/LiveContacts/Contacts/Contact').each do |contact|
+        email = contact.at('PreferredEmail').inner_text
         email.strip!
 
         first_name = last_name = nil
-        if first_name = contact.at('/profiles/personal/firstname')
+        if first_name = contact.at('Profiles/Personal/FirstName')
           first_name = first_name.inner_text.strip
         end
 
-        if last_name = contact.at('/profiles/personal/lastname')
+        if last_name = contact.at('Profiles/Personal/LastName')
           last_name = last_name.inner_text.strip
         end
         

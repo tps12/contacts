@@ -1,7 +1,7 @@
 require 'contacts'
 
 require 'rubygems'
-require 'hpricot'
+require 'nokogiri'
 require 'md5'
 require 'cgi'
 require 'time'
@@ -20,7 +20,7 @@ module Contacts
     end
     
     def self.frob_from_response(response)
-      doc = Hpricot::XML response.body
+      doc = Nokogiri::XML response.body
       doc.at('frob').inner_text
     end
     
@@ -45,7 +45,7 @@ module Contacts
       response = http_start do |flickr|
         flickr.get(token_url(key, secret, frob))
       end
-      doc = Hpricot::XML response.body
+      doc = Nokogiri::XML response.body
       doc.at('token').inner_text
     end
     

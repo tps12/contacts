@@ -26,5 +26,6 @@ spec/spec.opts
 spec/spec_helper.rb
 spec/windows_live/windows_live_spec.rb
 spec/yahoo/yahoo_spec.rb
+sundawg_contacts.gemspec
 vendor/windows_live_login.rb
 Manifest

@@ -58,7 +58,7 @@ Rake::RDocTask.new(:rdoc) do |rdoc|
 end
 
 desc 'Generate Ruby gem'
-Echoe.new('sundawg_contacts', '0.0.1') do |p|
+Echoe.new('sundawg_contacts', '0.0.2') do |p|
   p.description    = "Project fork of Mislav Contacts to support signed GData protocol."
   p.url            = "http://github.com/SunDawg/contacts"
   p.author         = "Christopher Sun"

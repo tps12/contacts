@@ -1,7 +1,7 @@
 require 'contacts'
 
 require 'rubygems'
-require 'hpricot'
+require 'nokogiri'
 require 'cgi'
 require 'time'
 require 'zlib'
@@ -218,18 +218,19 @@ module Contacts
       end
       
       def parse_contacts(body)
-        doc = Hpricot::XML body
+        doc = Nokogiri::XML body
         contacts_found = []
         
-        if updated_node = doc.at('/feed/updated')
+        if updated_node = doc.at('feed/updated')
           @updated_string = updated_node.inner_text
         end
+
+        (doc / 'feed/entry').each do |entry|
         
-        (doc / '/feed/entry').each do |entry|
-          email_nodes = entry / 'gd:email[@address]'
+          email_nodes = entry.xpath 'gd:email[@address]'
           
           unless email_nodes.empty?
-            title_node = entry.at('/title')
+            title_node = entry.at('title')
             name = title_node ? title_node.inner_text : nil
             contact = Contact.new(nil, name)
             contact.emails.concat email_nodes.map { |e| e['address'].to_s }
@@ -238,7 +239,7 @@ module Contacts
         end
 
         entry = (doc / '/feed/author').first
-        @author = Contact.new(entry.at('/email').inner_text, entry.at('/name').inner_text) if entry
+        @author = Contact.new(entry.at('email').inner_text, entry.at('name').inner_text) if entry
 
         contacts_found
       end

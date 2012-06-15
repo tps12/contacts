@@ -1,5 +1,5 @@
-<feed>
-  <entry xmlns='http://www.w3.org/2005/Atom' xmlns:gd='http://schemas.google.com/g/2005'>
+<feed xmlns='http://www.w3.org/2005/Atom' xmlns:gd='http://schemas.google.com/g/2005'>
+  <entry>
     <category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/contact/2008#contact'/>
     <title>Elizabeth Bennet</title>
     <content>My good friend, Liz.  A little quick to judge sometimes, but nice girl.</content>
